@@ -1,0 +1,147 @@
+.ui-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none; /* laisse passer les clics vers le canvas 3D */
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.ui-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  transition: opacity 0.4s ease;
+}
+
+.ui-header--dim {
+  opacity: 0.35;
+}
+
+.ui-header__name {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 500;
+}
+
+.ui-header__role {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.ui-hint {
+  position: absolute;
+  text-align: center;
+  bottom: 4rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+/* ---------- Panneau projet (visible en vue zoomée) ---------- */
+
+.project-panel {
+  pointer-events: none;
+  position: absolute;
+  right: 2rem;
+  bottom: 2rem;
+  top: 2rem;
+  width: min(360px, 88vw);
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  opacity: 0;
+  transform: translateX(16px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.project-panel--visible {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.project-panel__date {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0 0 0.35rem;
+}
+
+.project-panel__title {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 500;
+  margin: 0 0 0.4rem;
+  line-height: 1.15;
+}
+
+.project-panel__role {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin: 0 0 0.75rem;
+}
+
+.project-panel__desc {
+  font-size: 0.85rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+  margin: 0 0 1rem;
+}
+
+.project-panel__tags {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+
+.project-panel__tags li {
+  font-size: 0.7rem;
+  color: var(--text-primary);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+}
+
+.project-panel__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+
+.project-panel__links a {
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+.project-panel__links a:hover {
+  border-bottom-color: var(--text-primary);
+}
+
+@media (max-width: 640px) {
+  .ui-overlay {
+    padding: 1.25rem;
+  }
+  .project-panel {
+    right: 1.25rem;
+    left: 1.25rem;
+    bottom: 1.25rem;
+    top: auto;
+    width: auto;
+    max-width: none;
+  }
+}

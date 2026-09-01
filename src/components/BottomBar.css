@@ -1,0 +1,118 @@
+.bottombar {
+  --control-size: 36px;
+
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 28px;
+  pointer-events: none; /* seuls les enfants interactifs captent les clics */
+}
+
+/* ---------- Logos, bas gauche ---------- */
+
+.bottombar__socials {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bottombar__icon {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-size);
+  height: var(--control-size);
+  border-radius: 8px;
+  border: 1px solid rgba(231, 233, 238, 0.08);
+  background: rgba(20, 22, 28, 0.35);
+  color: #9ba0b3;
+  text-decoration: none;
+  transition: background 0.25s ease, border-color 0.25s ease,
+    box-shadow 0.25s ease, color 0.2s ease;
+}
+
+.bottombar__icon:hover {
+  color: #e7e9ee;
+  background: rgba(20, 22, 28, 0.5);
+  border-color: rgba(231, 233, 238, 0.3);
+  box-shadow: 0 0 0 1px rgba(231, 233, 238, 0.1);
+}
+
+/* ---------- Mail / Phone, bas droite ---------- */
+
+.bottombar__contacts {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.bottombar__reveal {
+  display: flex;
+  align-items: center;
+  height: var(--control-size);
+  padding: 0 4px;
+  border-radius: 8px;
+  border: 1px solid rgba(231, 233, 238, 0.08);
+  background: rgba(20, 22, 28, 0.35);
+  transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.bottombar__reveal:hover {
+  background: rgba(20, 22, 28, 0.5);
+  border-color: rgba(231, 233, 238, 0.3);
+  box-shadow: 0 0 0 1px rgba(231, 233, 238, 0.1);
+}
+
+.bottombar__reveal.is-copied {
+  border-color: rgba(231, 233, 238, 0.3);
+  box-shadow: 0 0 0 1px rgba(231, 233, 238, 0.1);
+}
+
+.bottombar__reveal-btn {
+  background: none;
+  border: none;
+  padding: 0 12px;
+  margin: 0;
+  height: 100%;
+  color: #9ba0b3;
+  cursor: pointer;
+  letter-spacing: 0.12em;
+  transition: color 0.2s ease;
+}
+
+.bottombar__reveal-btn:hover {
+  color: #e7e9ee;
+}
+
+.bottombar__reveal.is-copied .bottombar__reveal-btn {
+  color: #e7e9ee;
+}
+
+.bottombar__reveal-text {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .bottombar {
+    --control-size: 32px;
+    padding: 14px 16px;
+  }
+
+  .bottombar__contacts {
+    font-size: 10px;
+    gap: 8px;
+  }
+}

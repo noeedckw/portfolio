@@ -1,0 +1,301 @@
+/* Police futuriste — à mettre idéalement dans le <head> de index.html plutôt qu'en @import :
+   <link rel="preconnect" href="https://fonts.googleapis.com">
+   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;500;600&display=swap" rel="stylesheet">
+*/
+@import url("https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;500;600&family=Caveat:wght@500;700&display=swap");
+
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr; /* gauche / centre / droite — le centre reste centré quel que soit le contenu de gauche */
+  align-items: flex-start;
+  gap: 12px;
+  padding: clamp(14px, 3vw, 22px) clamp(16px, 4vw, 28px);
+  pointer-events: none; /* seuls les enfants interactifs captent les clics */
+}
+
+/* ---------- Zone gauche : identité + langue ---------- */
+
+.topbar__left {
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(8px, 2vw, 14px);
+  min-width: 0; /* indispensable pour que le texte puisse rétrécir au lieu de déborder */
+}
+
+.topbar__brand {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 2vw, 14px);
+  padding-left: 14px;
+  min-width: 0;
+}
+
+/* Petit cadran / repère type HUD, à gauche du bloc nom */
+.topbar__corner {
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 2px;
+  width: 2px;
+  background: linear-gradient(
+    180deg,
+    rgba(124, 140, 255, 0.9) 0%,
+    rgba(124, 140, 255, 0.15) 70%,
+    transparent 100%
+  );
+}
+
+.topbar__corner::before {
+  content: "";
+  position: absolute;
+  left: -3px;
+  top: -1px;
+  width: 8px;
+  height: 8px;
+  border-left: 1.5px solid rgba(124, 140, 255, 0.9);
+  border-top: 1.5px solid rgba(124, 140, 255, 0.9);
+}
+
+.topbar__brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.topbar__tag-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 2px;
+}
+
+.topbar__status {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #7c8cff;
+  box-shadow: 0 0 6px 1px rgba(124, 140, 255, 0.7);
+  animation: pulse 2.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.topbar__tag {
+  font-family: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: clamp(7px, 1.6vw, 10px);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #7c8cff;
+  white-space: nowrap;
+}
+
+/* --- Prénom + Nom, style normal/classique --- */
+
+.topbar__name {
+  display: inline-flex;
+  align-items: baseline;
+  gap: clamp(4px, 1vw, 7px);
+  line-height: 1;
+  font-family: "Caveat", cursive;
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere; /* évite que le nom pousse la topbar plus large que l'écran */
+}
+
+.topbar__first {
+  font-weight: 500;
+  font-size: clamp(15px, 4vw, 24px);
+  letter-spacing: 0.01em;
+  color: #e7e9ee;
+}
+
+.topbar__last {
+  font-weight: 700;
+  font-size: clamp(16px, 4.3vw, 26px);
+  letter-spacing: 0.01em;
+  color: #e7e9ee;
+}
+
+/* --- Rôle, sous le nom --- */
+
+.topbar__role {
+  margin-top: 2px;
+  font-family: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: clamp(8px, 1.8vw, 11px);
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: #6b7086;
+  white-space: nowrap;
+}
+
+/* ---------- Zone centre : roue de projets + bouton home ---------- */
+
+.topbar__center {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.topbar__wheel-wrap {
+  position: relative;
+  display: inline-flex; /* épouse exactement la taille de .pwheel — rien d'autre ne bouge */
+}
+
+.topbar__home {
+  pointer-events: auto;
+  position: absolute;
+  left: calc(100% + 10px); /* collé à droite de la roue, sans affecter sa taille/son centrage */
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 44px; /* même hauteur que .pwheel */
+  border-radius: 10px;
+  border: 1px solid rgba(231, 233, 238, 0.08);
+  background: rgba(20, 22, 28, 0.35);
+  color: #9ba0b3;
+  cursor: pointer;
+  transition: background 0.25s ease, border-color 0.25s ease,
+    box-shadow 0.25s ease, color 0.2s ease;
+}
+
+.topbar__home:hover {
+  color: #e7e9ee;
+  background: rgba(20, 22, 28, 0.5);
+  border-color: rgba(124, 140, 255, 0.5);
+  box-shadow: 0 0 0 1px rgba(124, 140, 255, 0.15),
+              0 0 12px rgba(124, 140, 255, 0.25);
+}
+
+/* ---------- Zone droite : switch de langue ---------- */
+
+.topbar__right {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+/* ---------- Switch de langue ---------- */
+
+.topbar__lang {
+  pointer-events: auto; /* réactive les clics/hover, annule l'héritage du parent */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-shrink: 0;
+  height: 44px; /* même hauteur que la roue de projets fermée (.pwheel) */
+  width: auto;
+  min-width: 34px; /* garantit assez de place pour "FR"/"EN" quel que soit l'écran */
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(231, 233, 238, 0.08);
+  background: rgba(20, 22, 28, 0.35);
+  transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  font-family: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: clamp(7px, 1.6vw, 8px);
+}
+
+.topbar__lang:hover {
+  background: rgba(20, 22, 28, 0.5);
+  border-color: rgba(124, 140, 255, 0.5);
+  box-shadow: 0 0 0 1px rgba(124, 140, 255, 0.15),
+              0 0 12px rgba(124, 140, 255, 0.25);
+}
+
+.topbar__lang-btn {
+  pointer-events: auto;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  line-height: 1;
+  color: #4d5162;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+  white-space: nowrap;
+  transition: opacity 0.2s ease, color 0.2s ease, text-shadow 0.2s ease;
+}
+
+/* langue NON choisie, au survol → gris plus clair */
+.topbar__lang-btn:hover {
+  color: #9ba0b3;
+  opacity: 1;
+}
+
+/* langue déjà choisie, au repos */
+.topbar__lang-btn.is-active {
+  color: #e7e9ee;
+  opacity: 1;
+}
+
+/* langue déjà choisie, au survol → légère surbrillance */
+.topbar__lang-btn.is-active:hover {
+  color: #ffffff;
+  text-shadow: 0 0 8px rgba(231, 233, 238, 0.5);
+}
+
+.topbar__lang-sep {
+  color: rgba(231, 233, 238, 0.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar__status {
+    animation: none;
+  }
+}
+
+/* --- Mobile : on garde tag + rôle visibles, on resserre juste les espacements --- */
+@media (max-width: 640px) {
+  .topbar {
+    padding: 14px 14px;
+    gap: 8px;
+  }
+
+  .topbar__left {
+    gap: 8px;
+  }
+
+  .topbar__brand {
+    gap: 8px;
+    padding-left: 10px;
+  }
+
+}
+
+/* --- Très petit mobile : le bloc gauche passe en colonne pour éviter tout débordement --- */
+@media (max-width: 380px) {
+  .topbar__left {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .topbar__first,
+  .topbar__last {
+    font-size: 15px;
+  }
+
+  .topbar__corner {
+    display: none;
+  }
+
+  .topbar__brand {
+    padding-left: 0;
+  }
+}

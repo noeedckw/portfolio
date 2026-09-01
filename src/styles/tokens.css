@@ -1,0 +1,28 @@
+:root {
+  --bg: #0a0b0f;
+  --bg-elevated: rgba(20, 22, 28, 0.72);
+  --border: #2a2e38;
+  --text-primary: #eef0f4;
+  --text-secondary: #9a9fae;
+  --accent: #7c8cff;
+  --font-display: "Fraunces", serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  -webkit-font-smoothing: antialiased;
+}

@@ -1,0 +1,132 @@
+.pwheel {
+  --pwheel-row-h: 34px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px 8px 10px;
+  height: 44px;
+  min-width: 180px;
+  border-radius: 22px;
+  background: rgba(20, 22, 28, 0.55);
+  border: 1px solid rgba(231, 233, 238, 0.1);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  cursor: pointer;
+  outline: none;
+  overflow: hidden;
+  pointer-events: auto; /* ← réactive tout le composant, annule l'héritage de .topbar { pointer-events: none } */
+  touch-action: none;
+  transition: height 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+  perspective: 340px;
+}
+
+.pwheel:hover {
+  border-color: rgba(124, 140, 255, 0.5);
+  box-shadow: 0 0 0 1px rgba(124, 140, 255, 0.15),
+              0 0 12px rgba(124, 140, 255, 0.25);
+}
+
+.pwheel:focus-visible {
+  border-color: rgba(124, 140, 255, 0.7);
+}
+
+.pwheel--open {
+  height: calc(var(--pwheel-row-h) * 3 + 16px);
+  background: rgba(20, 22, 28, 0.78);
+  border-color: rgba(124, 140, 255, 0.28);
+  box-shadow: 0 0 0 1px rgba(124, 140, 255, 0.15),
+              0 0 12px rgba(124, 140, 255, 0.25);
+}
+
+.pwheel__index {
+  flex-shrink: 0;
+  font-family: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: #7c8cff;
+  opacity: 0.85;
+}
+
+.pwheel__viewport {
+  position: relative;
+  flex: 1;
+  align-self: stretch;
+  overflow: hidden;
+}
+
+.pwheel__row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: var(--pwheel-row-h);
+  margin-top: calc(var(--pwheel-row-h) / -2);
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  color: #9aa0b4;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transform-origin: center;
+}
+
+.pwheel__row--current {
+  color: #ffffff;
+}
+
+.pwheel__rail {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0; /* ← resserré : c'était 3px, l'espacement venait surtout du padding des boutons */
+  opacity: 0.35;
+  transition: opacity 0.25s ease;
+}
+
+.pwheel--open .pwheel__rail {
+  opacity: 0.7;
+}
+
+.pwheel__chevron-btn {
+  background: none;
+  border: none;
+  padding: 2px 6px; /* ← vertical réduit de 6px à 2px, resserre encore plus */
+  margin: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pwheel__chevron {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid #7c8cff;
+  border-bottom: 1.5px solid #7c8cff;
+}
+
+.pwheel__chevron--up {
+  transform: rotate(-135deg);
+}
+
+.pwheel__chevron--down {
+  transform: rotate(45deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pwheel {
+    transition: none;
+  }
+}
