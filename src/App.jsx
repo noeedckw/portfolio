@@ -4,11 +4,12 @@ import UIOverlay from "./components/UIOverlay";
 import TopBar from "./components/TopBar";
 import BottomBar from "./components/BottomBar";
 import { site } from "./config/site.config";
-import { getSortedProjects } from "./config/projects.config";
+import { projects } from "./config/projects.config";
 import "./styles/global.css";
 import "./App.css";
 
-const projects = getSortedProjects();
+// `projects` : ordre chronologique brut (le plus ancien en premier) —
+// utilisé partout (map 3D ET roue de navigation) pour rester cohérent.
 
 export default function App() {
   const [activeProject, setActiveProject] = useState(null);

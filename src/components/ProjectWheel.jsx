@@ -117,6 +117,14 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
   // --- Drag via Pointer Events + capture : robuste même si le pointeur
   // sort de la zone du composant pendant le mouvement ---
   const handlePointerDown = useCallback((e) => {
+    // Si le pointerdown part d'un bouton (ligne prev/next, ligne courante,
+    // ou chevron), on laisse le onClick natif du bouton gérer l'action.
+    // Sinon, le settle() déclenché automatiquement ici au pointerup entre
+    // en course avec celui lancé par le onClick du bouton, et c'est
+    // généralement celui qui ramène au centre qui "gagne" — d'où
+    // l'impression que cliquer sur une ligne voisine ne fait rien.
+    if (e.target.closest("button")) return;
+
     isInteracting.current = true;
     setSpinning(true);
     stopMomentum();

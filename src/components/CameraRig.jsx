@@ -11,6 +11,14 @@ const OVERVIEW = {
  * chaque zoom projet. On ne fait que changer sa cible via
  * setLookAt(..., true) qui anime en interne (damping) — pas de
  * caméra recréée, pas d'animation manuelle coûteuse.
+ *
+ * En vue globale, la caméra est libre : rotation (clic gauche),
+ * déplacement/pan (clic droit ou molette-clic), et zoom (molette).
+ * Le `target` n'est donc plus un pivot fixe — truck() le déplace
+ * en même temps que la caméra, comme un vrai déplacement dans
+ * l'espace plutôt qu'une orbite autour d'un point immobile.
+ * En vue projet (zoom sur une carte), tout est verrouillé pour
+ * garder le focus sur le projet actif.
  */
 export default function CameraRig({ activeProject }) {
   const controlsRef = useRef();
@@ -33,14 +41,20 @@ export default function CameraRig({ activeProject }) {
       ref={controlsRef}
       makeDefault
       minDistance={1.5}
-      maxDistance={20}
+      maxDistance={30}
       dollyToCursor={false}
-      // sur la map globale on autorise une légère orbite libre,
-      // en vue projet on verrouille pour garder le focus
+      // sur la map globale : orbite + pan libres pour se balader ;
+      // en vue projet : tout verrouillé pour garder le focus
       polarRotateSpeed={activeProject ? 0 : 0.4}
       azimuthRotateSpeed={activeProject ? 0 : 0.4}
-      truckSpeed={0}
+      truckSpeed={activeProject ? 0 : 1.2}
       dollySpeed={activeProject ? 0 : 0.6}
+      mouseButtons={{
+        left: activeProject ? 0 : 1,   // ROTATE = 1 (0 = désactivé)
+        right: activeProject ? 0 : 2,  // TRUCK (pan) = 2
+        middle: activeProject ? 0 : 2, // molette-clic = pan aussi (confort)
+        wheel: 4,                      // DOLLY (zoom) = 4, toujours actif
+      }}
     />
   );
 }
