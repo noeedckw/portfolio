@@ -273,6 +273,12 @@
 .project-links__item:hover { background: rgba(255, 255, 255, 0.06); }
 .project-links__icon { font-weight: 600; }
 
+/* -------- Indicateur de pagination (dots) — mobile only -------- */
+
+.project-panel-dots {
+  display: none;
+}
+
 /* -------- Mobile : bottom sheet à deux pages swipables -------- */
 
 @media (max-width: 768px) {
@@ -284,6 +290,36 @@
 
   .project-panel-handle {
     display: none !important;
+  }
+
+  /* Dots de pagination, au-dessus du bottom sheet */
+  .project-panel-dots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    position: fixed;
+    left: 50%;
+    bottom: calc(55vh + 12px);
+    transform: translateX(-50%);
+    z-index: 11;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+  }
+  .project-panel-group--visible .project-panel-dots {
+    opacity: 1;
+  }
+  .project-panel-dots__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    transition: background 0.25s ease, transform 0.25s ease;
+  }
+  .project-panel-dots__dot--active {
+    background: rgba(255, 255, 255, 0.5);
+    transform: scale(1.35);
   }
 
   /* La piste horizontale : collée au bord bas de l'écran, point final. */

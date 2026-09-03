@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import TechStackList from "./TechStackList";
 import ProjectLinks from "./ProjectLinks";
@@ -25,11 +25,29 @@ export default function UIOverlay({ activeProject, locale = "fr" }) {
   const t = LABELS[locale] ?? LABELS.fr;
   const accent = activeProject?.theme?.accent ?? "#ffffff";
   const scrollRef = useRef();
+  const [activePage, setActivePage] = useState(0);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = 0;
+      scrollRef.current.scrollLeft = 0;
     }
+    setActivePage(0);
+  }, [activeProject?.id]);
+
+  // Suit la page active pendant le swipe horizontal (mobile) pour mettre à jour les dots
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const onScroll = () => {
+      if (el.clientWidth === 0) return;
+      const page = Math.round(el.scrollLeft / el.clientWidth);
+      setActivePage(page);
+    };
+
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
   }, [activeProject?.id]);
 
   return createPortal(
@@ -40,6 +58,16 @@ export default function UIOverlay({ activeProject, locale = "fr" }) {
         {activeProject && (
           <>
             <div className="project-panel-handle" />
+
+            {/* Indicateur de pagination — visible seulement en mobile via CSS */}
+            <div className="project-panel-dots">
+              <span
+                className={`project-panel-dots__dot ${activePage === 0 ? "project-panel-dots__dot--active" : ""}`}
+              />
+              <span
+                className={`project-panel-dots__dot ${activePage === 1 ? "project-panel-dots__dot--active" : ""}`}
+              />
+            </div>
 
             <div className="project-panel-scroll" ref={scrollRef} key={activeProject.id}>
               {/* -------- PANNEAU GAUCHE : récit -------- */}
