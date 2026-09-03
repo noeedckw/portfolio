@@ -20,7 +20,7 @@ export const site = {
   bio: "Développeur passionné par les expériences web originales. J'aime mélanger code et design pour créer des interfaces qui sortent du template.",
 
   // --- CV (optionnel) ---
-  resumeUrl: null, // ex: "/assets/cv.pdf"
+  resumeUrl: "frfr", // ex: "/assets/cv.pdf"
 
   // --- Téléphone (optionnel, affiché dans la bottom bar — laisse null pour le masquer) --
 
@@ -28,7 +28,7 @@ export const site = {
   socials: {
     github: "https://github.com/noeedckw",
     linkedin: "https://www.linkedin.com/in/noe-pereira",
-    cv: "/cv/noe-pereira-cv.pdf",
+    cv: "/portfolio/assets/cv/noe-pereira-cv.pdf",
     email: "noe.pereira@epitech.eu",
     phone: "+33 6 14 64 50 58",
   },
