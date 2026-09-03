@@ -614,7 +614,7 @@ export const projects = [
 
     logo: {
       shape: "none",
-      width: 1.4,
+      width: 1.35,
       height: 1.4,
       text: {
         titleSize: 0.25,
