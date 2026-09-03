@@ -277,6 +277,11 @@
 
 @media (max-width: 768px) {
 
+  .ui-hint {
+    bottom: auto;
+    bottom: 38px; /* ou une autre valeur selon où tu veux le placer */
+  }
+
   .project-panel-handle {
     display: none !important;
   }
