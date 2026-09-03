@@ -1,4 +1,4 @@
-import { Suspense, useMemo } from "react";
+import { Suspense, useMemo, useRef, useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Canvas } from "@react-three/fiber";
 import ProjectNode from "./ProjectNode";
 import ThemeBackdrop from "./ThemeBackdrop";
@@ -6,11 +6,60 @@ import CameraRig from "./CameraRig";
 import TimelineLinks from "./TimelineLinks";
 import { computeLayout } from "../config/layout";
 
-function SceneContent({ projects, activeProject, onSelect }) {
+/**
+ * Détecte si on est sur un viewport "mobile" (breakpoint par défaut
+ * 768px, comme la plupart des breakpoints Tailwind `md`). Réagit
+ * au resize / rotation d'écran.
+ */
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth < breakpoint : false
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onResize = () => setIsMobile(window.innerWidth < breakpoint);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [breakpoint]);
+
+  return isMobile;
+}
+
+// Facteur de resserrement appliqué aux projets qui n'ont PAS de
+// `positionMobile` explicite dans la config (fallback automatique).
+const MOBILE_FALLBACK_SCALE = 0.55;
+
+/**
+ * Applique la disposition mobile :
+ * - si le projet a `positionMobile`, on l'utilise telle quelle
+ *   (c'est le cas de tous les projets de la config actuelle —
+ *   une tour en spirale descendante, resserrée et légèrement
+ *   irrégulière) ;
+ * - sinon, fallback : on resserre la `position` desktop d'un
+ *   facteur fixe, pour ne jamais se retrouver avec un projet
+ *   "orphelin" trop loin de la vue si jamais un nouveau projet
+ *   est ajouté sans positionMobile.
+ */
+function applyMobilePositions(rawProjects, laidOutProjects) {
+  return laidOutProjects.map((project, i) => {
+    const rawMobile = rawProjects[i]?.positionMobile;
+    if (rawMobile) {
+      return { ...project, position: rawMobile };
+    }
+    const [x, y, z] = project.position;
+    return {
+      ...project,
+      position: [x * MOBILE_FALLBACK_SCALE, y * MOBILE_FALLBACK_SCALE, z * MOBILE_FALLBACK_SCALE],
+    };
+  });
+}
+
+function SceneContent({ projects, activeProject, onSelect, lang, cameraRigRef, onDriftChange, isMobile }) {
   return (
     <>
       <ThemeBackdrop activeTheme={activeProject?.theme ?? null} />
-      <CameraRig activeProject={activeProject} />
+      <CameraRig ref={cameraRigRef} activeProject={activeProject} onDriftChange={onDriftChange} />
 
       <TimelineLinks projects={projects} activeProject={activeProject} />
 
@@ -21,6 +70,8 @@ function SceneContent({ projects, activeProject, onSelect }) {
           isActive={activeProject?.id === project.id}
           isDimmed={Boolean(activeProject) && activeProject.id !== project.id}
           onSelect={onSelect}
+          lang={lang}
+          isMobile={isMobile}
         />
       ))}
     </>
@@ -28,22 +79,32 @@ function SceneContent({ projects, activeProject, onSelect }) {
 }
 
 /**
- * Canvas R3F unique pour tout le portfolio, en rendu "timeline 3D" :
- * les projets sont alignés verticalement par ordre chronologique
- * (computeLayout) et reliés par des segments orthogonaux
- * (TimelineLinks). De face, la scène ressemble à une timeline 2D
- * en zigzag ; la profondeur (axe Z) ne se révèle qu'en tournant
- * la caméra.
+ * `onDriftChange(hasDrifted: boolean)` remonte l'état "l'utilisateur
+ * s'est éloigné de la vue d'ensemble" jusqu'au parent (App), qui
+ * décide d'afficher le bouton "retour" dans TopBar.
  *
- * Réglages pensés pour rester léger sur machine modeste :
- * - dpr plafonné (évite de rendre en 3x sur écrans Retina/4K)
- * - pas d'ombres portées, pas de post-processing
- * - géométries plates (planes), pas de modèles lourds
+ * La ref exposée (`resetToOverview`) permet à App de déclencher le
+ * retour depuis le clic du bouton, sans que TopBar ait besoin
+ * d'accéder directement au Canvas / à CameraControls.
  */
-export default function PortfolioMap({ projects, activeProject, onSelect }) {
-  const laidOutProjects = useMemo(() => computeLayout(projects), [projects]);
+const PortfolioMap = forwardRef(function PortfolioMap(
+  { projects, activeProject, onSelect, lang = "fr", onDriftChange },
+  ref
+) {
+  const isMobile = useIsMobile();
+  const cameraRigRef = useRef();
 
-  // on garde le même objet "projet actif" mais avec sa position calculée
+  const laidOutProjects = useMemo(() => {
+    const base = computeLayout(projects);
+    return isMobile ? applyMobilePositions(projects, base) : base;
+  }, [projects, isMobile]);
+
+  useImperativeHandle(ref, () => ({
+    resetToOverview() {
+      cameraRigRef.current?.resetToOverview();
+    },
+  }));
+
   const activeLaidOut = activeProject
     ? laidOutProjects.find((p) => p.id === activeProject.id)
     : null;
@@ -52,7 +113,7 @@ export default function PortfolioMap({ projects, activeProject, onSelect }) {
     <Canvas
       dpr={[1, 1.5]}
       gl={{ antialias: true, powerPreference: "high-performance", alpha: false }}
-      camera={{ fov: 45, near: 0.1, far: 100 }}
+      camera={{ fov: 45, near: 0.1, far: 9000 }}
       shadows={false}
     >
       <Suspense fallback={null}>
@@ -60,8 +121,14 @@ export default function PortfolioMap({ projects, activeProject, onSelect }) {
           projects={laidOutProjects}
           activeProject={activeLaidOut}
           onSelect={onSelect}
+          lang={lang}
+          cameraRigRef={cameraRigRef}
+          onDriftChange={onDriftChange}
+          isMobile={isMobile}
         />
       </Suspense>
     </Canvas>
   );
-}
+});
+
+export default PortfolioMap;

@@ -35,7 +35,7 @@ export default function ThemeBackdrop({ activeTheme }) {
 
   return (
     <>
-      <fog ref={fogRef} attach="fog" args={[bgColor.current.getHexString(), 6, 26]} />
+      <fog ref={fogRef} attach="fog" args={[bgColor.current.getHexString(), 20, 38]} />
       <ambientLight intensity={0.55} />
       <directionalLight position={[4, 6, 4]} intensity={0.6} />
       {particleMode !== "none" && (

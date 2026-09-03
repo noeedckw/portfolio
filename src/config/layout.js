@@ -36,12 +36,12 @@ export function computeLayout(
     spacingY = 2.4,            // distance verticale entre deux projets
 
     // --- Le grand S ---
-    xAmplitude = 3.6,          // amplitude franche pour que le S se voie bien
+    xAmplitude = 6.2,          // amplitude franche pour que le S se voie bien
     xCycles = 1,               // 1 cycle complet = un seul S propre sur toute la timeline
                                // (1.5 ou 2 si tu veux qu'il reparte une 2e fois sur une longue liste)
 
     // --- Grain organique, discret, pour ne pas casser le S ---
-    xJitterAmplitude = 0.35,   // nettement plus petit que xAmplitude (≈10%)
+    xJitterAmplitude = 0.55,   // nettement plus petit que xAmplitude (≈10%)
     xJitterPeriod = 3.3,       // période courte, non entière exprès pour éviter tout repeat régulier
     xJitterPhase = 0.6,        // déphasage pour désynchroniser l'ondulation du grand S
 

@@ -115,4 +115,10 @@
     font-size: 10px;
     gap: 8px;
   }
+
+  .bottombar--project-open {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
 }

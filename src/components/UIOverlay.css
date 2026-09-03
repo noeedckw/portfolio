@@ -1,147 +1,356 @@
 .ui-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  pointer-events: none; /* laisse passer les clics vers le canvas 3D */
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
-}
-
-.ui-header {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  transition: opacity 0.4s ease;
-}
-
-.ui-header--dim {
-  opacity: 0.35;
-}
-
-.ui-header__name {
-  font-family: var(--font-display);
-  font-size: 1.3rem;
-  font-weight: 500;
-}
-
-.ui-header__role {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
+  pointer-events: none;
+  z-index: 10;
 }
 
 .ui-hint {
   position: absolute;
-  text-align: center;
-  bottom: 4rem;
+  bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  letter-spacing: 0.04em;
-  margin: 0;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+  text-align: center;
+  letter-spacing: 0.02em;
 }
 
-/* ---------- Panneau projet (visible en vue zoomée) ---------- */
+/* -------- Panneaux gauche / droite (desktop) -------- */
+
+.project-panel-group {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
 
 .project-panel {
-  pointer-events: none;
-  position: absolute;
-  right: 2rem;
-  bottom: 2rem;
-  top: 2rem;
-  width: min(360px, 88vw);
-  max-width: 360px;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
+  position: fixed;
+  top: 50%;
+  width: 480px;
+  max-height: 70vh;
+  overflow-y: auto;
+  overflow-anchor: none;
+  padding: 32px 28px;
+  background: rgba(10, 10, 12, 0.8);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
   opacity: 0;
-  transform: translateX(16px);
-  transition: opacity 0.35s ease, transform 0.35s ease;
+  pointer-events: none;
+  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Scrollbar discrète (Firefox) */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
 
-.project-panel--visible {
+/* Scrollbar discrète (Chrome / Safari / Edge) */
+.project-panel::-webkit-scrollbar {
+  width: 6px;
+}
+.project-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+.project-panel::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+}
+.project-panel::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.32);
+}
+
+.project-panel--left {
+  left: 36px;
+  transform: translate(-16px, -50%);
+}
+.project-panel--right {
+  right: 36px;
+  transform: translate(16px, -50%);
+}
+
+.project-panel-group--visible .project-panel {
   opacity: 1;
-  transform: translateX(0);
   pointer-events: auto;
 }
+.project-panel-group--visible .project-panel--left { transform: translate(0, -50%); }
+.project-panel-group--visible .project-panel--right { transform: translate(0, -50%); }
+
+/* -------- Contenu panneau gauche (récit) -------- */
 
 .project-panel__date {
   font-size: 0.75rem;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  margin: 0 0 0.35rem;
+  margin-bottom: 4px;
 }
-
 .project-panel__title {
-  font-family: var(--font-display);
-  font-size: 1.6rem;
-  font-weight: 500;
-  margin: 0 0 0.4rem;
-  line-height: 1.15;
+  font-size: 1.5rem;
+  color: #eef0f4;
+  margin: 0 0 4px;
 }
-
 .project-panel__role {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin: 0 0 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
+  margin-bottom: 2px;
 }
-
+.project-panel__meta {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.78rem;
+  margin-bottom: 14px;
+}
 .project-panel__desc {
-  font-size: 0.85rem;
-  line-height: 1.65;
-  color: var(--text-secondary);
-  background: var(--bg-elevated);
-  backdrop-filter: blur(6px);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.9rem 1rem;
-  margin: 0 0 1rem;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.55;
+  margin: 14px 0;
 }
 
 .project-panel__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
   padding: 0;
-  margin: 0 0 1rem;
+  margin: 0 0 4px;
 }
-
 .project-panel__tags li {
-  font-size: 0.7rem;
-  color: var(--text-primary);
-  border: 1px solid var(--accent);
+  border: 1px solid;
   border-radius: 999px;
-  padding: 0.2rem 0.6rem;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.85);
 }
 
-.project-panel__links {
+.project-panel__highlights {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.project-panel__highlights li {
+  position: relative;
+  padding-left: 16px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.4;
+}
+.project-panel__highlights li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dot, #fff);
+}
+
+/* -------- Contenu panneau droit (technique / recruteur) -------- */
+
+.project-panel__profile {
+  margin: 18px 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.6;
+}
+.project-panel__availability ul {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.metrics-grid__item { display: flex; flex-direction: column; }
+.metrics-grid__value { font-size: 1.1rem; font-weight: 600; }
+.metrics-grid__label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* -------- Tech stack — accordéon sobre -------- */
+
+.tech-stack { margin: 18px 0; }
+.tech-stack__group { margin-bottom: 18px; }
+.tech-stack__label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  position: relative;
+}
+.tech-stack__label::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 1px;
+  width: 24px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.tech-stack__grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 1.25rem;
+  gap: 8px;
 }
 
-.project-panel__links a {
-  font-size: 0.8rem;
-  color: var(--text-primary);
+.tech-tile {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 13px 7px 7px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  opacity: 0;
+  transform: translateY(6px);
+  animation: tech-tile-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.tech-tile:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.tech-tile__badge {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tech-tile__name {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.8);
+  white-space: nowrap;
+}
+
+@keyframes tech-tile-in {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* -------- Liens -------- */
+
+.project-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+}
+.project-links__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #eef0f4;
   text-decoration: none;
-  border-bottom: 1px solid transparent;
+  font-size: 0.85rem;
+  transition: background 0.2s;
 }
+.project-links__item:hover { background: rgba(255, 255, 255, 0.06); }
+.project-links__icon { font-weight: 600; }
 
-.project-panel__links a:hover {
-  border-bottom-color: var(--text-primary);
-}
+/* -------- Mobile : bottom sheet à deux pages swipables -------- */
 
-@media (max-width: 640px) {
-  .ui-overlay {
-    padding: 1.25rem;
+@media (max-width: 768px) {
+
+  .project-panel-handle {
+    display: none !important;
   }
-  .project-panel {
-    right: 1.25rem;
-    left: 1.25rem;
-    bottom: 1.25rem;
-    top: auto;
-    width: auto;
-    max-width: none;
+
+  /* La piste horizontale : collée au bord bas de l'écran, point final. */
+  .project-panel-scroll {
+    display: flex !important;
+    flex-direction: row !important;
+    position: fixed !important;
+    top: auto !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 60vh !important;
+    max-height: 60vh !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scroll-snap-type: x mandatory !important;
+    -webkit-overflow-scrolling: touch !important;
+
+    border-radius: 20px 20px 0 0 !important;
+
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+  }
+  .project-panel-group--visible .project-panel-scroll {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .project-panel-scroll::-webkit-scrollbar { display: none !important; }
+  .project-panel-scroll { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+
+  /* Chaque panneau = une page plein écran du bloc, scrollable verticalement */
+  .project-panel--left,
+  .project-panel--right {
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+
+    scroll-snap-align: start;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain;
+
+    transform: none !important;
+    background: rgba(10, 10, 12, 0.9);
+    backdrop-filter: blur(14px);
+    border: none;
+
+    padding: 24px 20px 28px !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  .project-panel--left::-webkit-scrollbar,
+  .project-panel--right::-webkit-scrollbar { display: none !important; }
+  .project-panel--left,
+  .project-panel--right {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
   }
 }

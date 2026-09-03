@@ -5,9 +5,9 @@ import "./BottomBar.css";
  * BottomBar — overlay fixe en bas de l'écran.
  *
  * Props:
- * - socials: { github, linkedin, email }   (depuis site.config.js — null = masqué)
- * - phone: string | null                    (depuis site.config.js — null = masqué)
+ * - socials: { github, linkedin, cv, email }  (depuis site.config.js — null = masqué)
  * - locale: "fr" | "en"
+ * - isProjectOpen: bool — true quand un panneau projet est ouvert (masque la bar en mobile)
  */
 
 const LABELS = {
@@ -27,6 +27,17 @@ function LinkedinIcon() {
   return (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
       <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.38-1.85 3.61 0 4.28 2.38 4.28 5.47v6.27ZM5.34 7.43a2.07 2.07 0 1 1 0-4.13 2.07 2.07 0 0 1 0 4.13ZM7.12 20.45H3.56V9h3.56v11.45Z" />
+    </svg>
+  );
+}
+
+function CvIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+      <path d="M14 2v6h6" />
+      <path d="M12 11v7" />
+      <path d="M9 15l3 3 3-3" />
     </svg>
   );
 }
@@ -65,12 +76,7 @@ function CopyReveal({ label, value, copiedLabel }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <button
-        type="button"
-        className="bottombar__reveal-btn"
-        onClick={handleCopy}
-        title={value}
-      >
+      <button type="button" className="bottombar__reveal-btn" onClick={handleCopy} title={value}>
         <span className="bottombar__reveal-text">
           {copied ? copiedLabel : hovered ? value : label}
         </span>
@@ -79,37 +85,30 @@ function CopyReveal({ label, value, copiedLabel }) {
   );
 }
 
-export default function BottomBar({ socials, locale = "fr" }) {
+export default function BottomBar({ socials, locale = "fr", isProjectOpen = false }) {
   const t = LABELS[locale] ?? LABELS.fr;
 
-  const hasSocials = socials?.github || socials?.linkedin;
+  const hasSocials = socials?.github || socials?.linkedin || socials?.cv;
   const hasContacts = socials?.email || socials?.phone;
 
   if (!hasSocials && !hasContacts) return null;
 
   return (
-    <footer className="bottombar">
+    <footer className={`bottombar ${isProjectOpen ? "bottombar--project-open" : ""}`}>
       <div className="bottombar__socials">
         {socials?.github && (
-          <a
-            href={socials.github}
-            target="_blank"
-            rel="noreferrer"
-            className="bottombar__icon"
-            aria-label="GitHub"
-          >
+          <a href={socials.github} target="_blank" rel="noreferrer" className="bottombar__icon" aria-label="GitHub">
             <GithubIcon />
           </a>
         )}
         {socials?.linkedin && (
-          <a
-            href={socials.linkedin}
-            target="_blank"
-            rel="noreferrer"
-            className="bottombar__icon"
-            aria-label="LinkedIn"
-          >
+          <a href={socials.linkedin} target="_blank" rel="noreferrer" className="bottombar__icon" aria-label="LinkedIn">
             <LinkedinIcon />
+          </a>
+        )}
+        {socials?.cv && (
+          <a href={socials.cv} download className="bottombar__icon" aria-label="CV">
+            <CvIcon />
           </a>
         )}
       </div>

@@ -28,7 +28,7 @@ export const site = {
   socials: {
     github: "https://github.com/noeedckw",
     linkedin: "https://www.linkedin.com/in/noe-pereira",
-    twitter: null,
+    cv: "/cv/noe-pereira-cv.pdf",
     email: "noe.pereira@epitech.eu",
     phone: "+33 6 14 64 50 58",
   },
