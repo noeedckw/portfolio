@@ -2,25 +2,38 @@ import { useMemo, useRef, useState, useCallback, useEffect } from "react";
 import "./ProjectWheel.css";
 
 /**
- * Roue de navigation "hublot". Drag/molette avec inertie (spin + ralentissement
- * progressif + snap sur l'item le plus proche), flèches, clavier. Toujours 3
- * lignes visibles (prev/current/next), clippées dans le cadre. Bouclée.
+ * Roue de navigation "hublot". Toujours 3 lignes visibles
+ * (prev/current/next), clippées dans le cadre. Bouclée.
  *
- * Le drag utilise setPointerCapture : l'élément continue de recevoir
- * pointermove/pointerup même si le curseur sort de la zone en cours de
- * mouvement — indispensable vu la petite taille du composant, sinon un
- * relâchement hors zone laisse le drag "coincé" en état ouvert.
+ * Navigation par clic / drag-to-spin / flèches / molette / clavier.
+ *
+ * Le drag distingue clic-vs-drag par un SEUIL DE MOUVEMENT plutôt que
+ * par la cible du pointerdown (l'ancienne version bailait sur tout
+ * <button>, ce qui excluait la quasi-totalité de la zone utile — le
+ * row courant recouvre presque tout le viewport). Au pointerdown, on
+ * note juste la position de départ, sans rien décider. Tant que le
+ * déplacement cumulé reste sous DRAG_THRESHOLD, on ne touche à rien —
+ * ça laisse le <button> sous le doigt recevoir un clic natif normal.
+ * Dès que ça dépasse le seuil, c'est un vrai drag : on ouvre la roue,
+ * on la fait tourner en live, on calcule la vélocité. Au relâchement,
+ * si un drag a eu lieu, on lance l'inertie puis on "avale" le clic
+ * fantôme qui suivrait sinon le pointerup (via justDraggedRef), pour
+ * ne pas parasiter la sélection avec un clic non voulu sur le bouton
+ * relâché.
+ *
+ * `settle()` reste l'UNIQUE point qui referme la roue (clickedOpen →
+ * false) et sélectionne, que la navigation vienne d'un clic, d'une
+ * flèche, de la molette, du clavier OU de la fin d'un drag/fling — donc
+ * aucun chemin ne peut laisser la roue "coincée" ouverte.
  *
  * Le clic extérieur est écouté en permanence (pas seulement quand isOpen)
  * et lit l'état via une ref, pour fermer le menu de façon fiable dans tous
- * les cas, y compris juste après un spin qui vient de se stabiliser.
+ * les cas.
  *
  * Sur tactile (isTouch), les flèches prev/next sont carrément retirées
  * du DOM (pas juste cachées) : trop petites pour être tapées de façon
- * fiable, et le drag/swipe sur la roue fait déjà le même travail. Le
- * composant se resserre en conséquence (voir CSS, .pwheel--touch) et
- * le padding gauche/droite est égalisé pour garder l'ensemble
- * index+texte visuellement centré dans le cadre.
+ * fiable. Un tap sur la roue (fermée) l'ouvre ; un tap sur un row
+ * voisin sélectionne et referme ; un swipe vertical fait spinner.
  *
  * Props:
  * - projects: [{ id, title }]
@@ -30,9 +43,15 @@ import "./ProjectWheel.css";
  */
 
 const ITEM_HEIGHT = 34; // DOIT être identique à --pwheel-row-h dans le CSS
+const VISIBLE_RANGE = 1; // toujours prev / current / next
+const DRAG_THRESHOLD = 6; // px — en dessous, on considère que c'est un tap/clic
 const FRICTION = 0.94;
 const MIN_VELOCITY = 0.01;
-const VISIBLE_RANGE = 1; // toujours prev / current / next
+// Atténuation de l'opacité des rows voisins selon leur distance au
+// centre (it.pos, qui peut monter jusqu'à ~1.5 en cours de
+// transition). Plus cette valeur est basse, plus le texte reste
+// visible longtemps en s'éloignant du centre.
+const NEIGHBOR_FADE = 0.35;
 
 export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = "Map" }) {
   const items = useMemo(
@@ -75,14 +94,24 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
   const [hovered, setHovered] = useState(false);
   const [clickedOpen, setClickedOpen] = useState(false);
   const [spinning, setSpinning] = useState(false);
-  const isOpen = hovered || clickedOpen || spinning;
+  // Sur tactile, le premier tap déclenche souvent un `mouseenter`
+  // synthétique sans `mouseleave` derrière (pas de curseur qui "s'en
+  // va") — donc `hovered` resterait bloqué à true indéfiniment et la
+  // roue ne se refermerait jamais. On ignore complètement `hovered`
+  // quand isTouch : seuls clickedOpen/spinning (tous deux remis à
+  // false par settle()) pilotent l'ouverture sur tactile.
+  const isOpen = (isTouch ? false : hovered) || clickedOpen || spinning;
   const isOpenRef = useRef(isOpen);
   isOpenRef.current = isOpen;
 
   const rootRef = useRef(null);
   const rafRef = useRef(null);
-  const velocityRef = useRef(0);
   const dragRef = useRef(null); // { startY, startRotation, lastY, lastT, moved }
+  const velocityRef = useRef(0);
+  // Vrai brièvement après la fin d'un drag réel : sert à avaler le
+  // clic fantôme que le navigateur déclenche après un pointerup, pour
+  // qu'il ne vienne pas parasiter la sélection gérée par settle().
+  const justDraggedRef = useRef(false);
 
   const stopMomentum = useCallback(() => {
     if (rafRef.current) {
@@ -91,6 +120,10 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
     }
   }, []);
 
+  // Unique point d'animation + de fermeture. Toute navigation (clic,
+  // flèche, molette, clavier) passe par ici. C'est aussi le SEUL
+  // endroit qui referme la roue (clickedOpen → false) une fois la
+  // cible atteinte — plus de risque de roue coincée ouverte.
   const settle = useCallback(
     (finalRotation) => {
       const target = Math.round(finalRotation);
@@ -101,6 +134,7 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
           setRotation(target);
           isInteracting.current = false;
           setSpinning(false);
+          setClickedOpen(false);
           onSelect(items[((target % n) + n) % n].id);
           rafRef.current = null;
           return;
@@ -109,10 +143,23 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
         setRotation(current);
         rafRef.current = requestAnimationFrame(step);
       };
+      isInteracting.current = true;
+      setSpinning(true);
+      stopMomentum();
       rafRef.current = requestAnimationFrame(step);
     },
-    [items, n, onSelect]
+    [items, n, onSelect, stopMomentum]
   );
+
+  const forceClose = useCallback(() => {
+    stopMomentum();
+    isInteracting.current = false;
+    setSpinning(false);
+    setClickedOpen(false);
+    const nearest = Math.round(rotationRef.current);
+    setRotation(nearest);
+    onSelect(items[((nearest % n) + n) % n].id);
+  }, [stopMomentum, items, n, onSelect]);
 
   const runMomentum = useCallback(() => {
     const step = () => {
@@ -127,49 +174,41 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
     rafRef.current = requestAnimationFrame(step);
   }, [settle]);
 
-  const forceClose = useCallback(() => {
-    stopMomentum();
-    isInteracting.current = false;
-    setSpinning(false);
-    setClickedOpen(false);
-    const nearest = Math.round(rotationRef.current);
-    setRotation(nearest);
-    onSelect(items[((nearest % n) + n) % n].id);
-  }, [stopMomentum, items, n, onSelect]);
-
-  // --- Drag via Pointer Events + capture : robuste même si le pointeur
-  // sort de la zone du composant pendant le mouvement ---
+  // --- Drag-to-spin via Pointer Events + capture, avec détection
+  // clic-vs-drag par seuil de mouvement (voir commentaire en tête de
+  // fichier). On exclut seulement la zone des flèches (.pwheel__rail),
+  // qui garde un clic simple prev/next. ---
   const handlePointerDown = useCallback((e) => {
-    // Si le pointerdown part d'un bouton (ligne prev/next, ligne courante,
-    // ou chevron), on laisse le onClick natif du bouton gérer l'action.
-    // Sinon, le settle() déclenché automatiquement ici au pointerup entre
-    // en course avec celui lancé par le onClick du bouton, et c'est
-    // généralement celui qui ramène au centre qui "gagne" — d'où
-    // l'impression que cliquer sur une ligne voisine ne fait rien.
-    if (e.target.closest("button")) return;
+    if (e.target.closest(".pwheel__rail")) return;
 
-    isInteracting.current = true;
-    setSpinning(true);
-    stopMomentum();
-    velocityRef.current = 0;
     dragRef.current = {
       startY: e.clientY,
       startRotation: rotationRef.current,
       lastY: e.clientY,
       lastT: performance.now(),
+      moved: false,
     };
-    setClickedOpen(true);
+    velocityRef.current = 0;
+    stopMomentum();
     e.currentTarget.setPointerCapture(e.pointerId);
   }, [stopMomentum]);
 
   const handlePointerMove = useCallback((e) => {
     if (!dragRef.current) return;
     const y = e.clientY;
-    const now = performance.now();
-    const { startY, startRotation, lastY, lastT } = dragRef.current;
+    const dyTotal = y - dragRef.current.startY;
 
-    const deltaItems = (y - startY) / ITEM_HEIGHT;
-    setRotation(startRotation - deltaItems);
+    if (!dragRef.current.moved) {
+      if (Math.abs(dyTotal) < DRAG_THRESHOLD) return; // encore sous le seuil, peut-être un simple tap
+      dragRef.current.moved = true;
+      isInteracting.current = true;
+      setSpinning(true); // ouvre la roue dès que le drag est confirmé
+    }
+
+    const now = performance.now();
+    const { startRotation, lastY, lastT } = dragRef.current;
+
+    setRotation(startRotation - dyTotal / ITEM_HEIGHT);
 
     const dt = Math.max(now - lastT, 1);
     velocityRef.current = -((y - lastY) / ITEM_HEIGHT) / (dt / 16);
@@ -179,12 +218,22 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
 
   const handlePointerUp = useCallback((e) => {
     if (!dragRef.current) return;
+    const wasDrag = dragRef.current.moved;
     dragRef.current = null;
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch {
       // no-op si déjà relâché
     }
+
+    if (!wasDrag) return; // simple tap/clic : on laisse le onClick natif du bouton gérer ça
+
+    // vrai drag : on avale le clic fantôme qui suivrait ce pointerup
+    justDraggedRef.current = true;
+    requestAnimationFrame(() => {
+      justDraggedRef.current = false;
+    });
+
     if (Math.abs(velocityRef.current) > MIN_VELOCITY) {
       runMomentum();
     } else {
@@ -192,52 +241,53 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
     }
   }, [runMomentum, settle]);
 
-  // --- Molette ---
+  // --- Molette : un cran = un item, pas de vélocité/inertie. On
+  // ignore les événements wheel supplémentaires tant qu'une animation
+  // est en cours (rafRef.current non nul), pour éviter qu'un scroll
+  // de trackpad (qui envoie plein de petits deltaY) fasse défiler
+  // plusieurs items d'un coup de façon imprévisible. ---
   const handleWheel = useCallback(
     (e) => {
       e.preventDefault();
-      isInteracting.current = true;
-      setSpinning(true);
-      stopMomentum();
-      velocityRef.current += (e.deltaY > 0 ? 1 : -1) * 0.12;
-      runMomentum();
+      if (rafRef.current) return;
+      settle(Math.round(rotationRef.current) + (e.deltaY > 0 ? 1 : -1));
     },
-    [runMomentum, stopMomentum]
+    [settle]
   );
 
   // --- Flèches (desktop uniquement, voir isTouch) ---
   const goPrev = useCallback((e) => {
     e.stopPropagation();
-    isInteracting.current = true;
-    stopMomentum();
+    if (justDraggedRef.current) return;
     settle(Math.round(rotationRef.current) - 1);
-  }, [settle, stopMomentum]);
+  }, [settle]);
 
   const goNext = useCallback((e) => {
     e.stopPropagation();
-    isInteracting.current = true;
-    stopMomentum();
+    if (justDraggedRef.current) return;
     settle(Math.round(rotationRef.current) + 1);
-  }, [settle, stopMomentum]);
+  }, [settle]);
 
   // clavier
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e) => {
-      if (e.key === "ArrowDown") {
-        isInteracting.current = true;
-        stopMomentum();
-        settle(Math.round(rotationRef.current) + 1);
-      }
-      if (e.key === "ArrowUp") {
-        isInteracting.current = true;
-        stopMomentum();
-        settle(Math.round(rotationRef.current) - 1);
-      }
+      if (e.key === "ArrowDown") settle(Math.round(rotationRef.current) + 1);
+      if (e.key === "ArrowUp") settle(Math.round(rotationRef.current) - 1);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [isOpen, settle, stopMomentum]);
+  }, [isOpen, settle]);
+
+  // Clic sur le fond du composant (pas sur un bouton — les boutons
+  // stoppent déjà la propagation dans leur propre onClick) : ouvre la
+  // roue. Sert surtout au tactile, qui n'a pas de hover pour révéler
+  // prev/next.
+  const handleRootClick = useCallback((e) => {
+    if (justDraggedRef.current) return; // clic fantôme après un drag, on ignore
+    if (e.target.closest("button")) return;
+    setClickedOpen((v) => !v);
+  }, []);
 
   // clic extérieur : listener TOUJOURS actif (monté une seule fois), lit
   // isOpenRef à l'instant du clic — évite tout souci de timing d'attach/detach
@@ -269,8 +319,9 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
     <div
       ref={rootRef}
       className={`pwheel ${isOpen ? "pwheel--open" : ""} ${isTouch ? "pwheel--touch" : ""}`}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={isTouch ? undefined : () => setHovered(true)}
+      onMouseLeave={isTouch ? undefined : () => setHovered(false)}
+      onClick={handleRootClick}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
@@ -296,17 +347,22 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
                 "--ty": `${it.pos * ITEM_HEIGHT}px`,
                 "--rx": `${it.pos * -28}deg`,
                 "--sc": 1 - Math.abs(it.pos) * 0.14,
-                opacity: isOpen ? Math.max(0, 1 - Math.abs(it.pos) * 0.6) : (isCurrent ? 1 : 0),
+                opacity: isOpen ? Math.max(0, 1 - Math.abs(it.pos) * NEIGHBOR_FADE) : (isCurrent ? 1 : 0),
                 zIndex: isCurrent ? 2 : 1,
                 pointerEvents: isCurrent || isOpen ? "auto" : "none",
               }}
               onClick={(e) => {
                 e.stopPropagation();
+                if (justDraggedRef.current) return; // clic fantôme après un drag, on ignore
                 if (isCurrent) {
-                  onSelect(it.id);
+                  if (isOpen) {
+                    // déjà sélectionné, on referme juste
+                    setClickedOpen(false);
+                  } else {
+                    // fermé : un tap/clic sur le seul row visible ouvre la roue
+                    setClickedOpen(true);
+                  }
                 } else {
-                  isInteracting.current = true;
-                  stopMomentum();
                   settle(Math.round(rotation + it.pos));
                 }
               }}
@@ -318,7 +374,7 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
       </div>
 
       {/* Flèches retirées du DOM sur tactile : trop petites pour être
-          tapées de façon fiable, et redondantes avec le drag/swipe. */}
+          tapées de façon fiable, et redondantes avec le tap-pour-ouvrir. */}
       {!isTouch && (
         <div className="pwheel__rail">
           <button
