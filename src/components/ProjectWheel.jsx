@@ -345,7 +345,6 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
               className={`pwheel__row ${isCurrent ? "pwheel__row--current" : ""}`}
               style={{
                 "--ty": `${it.pos * ITEM_HEIGHT}px`,
-                "--rx": `${it.pos * -28}deg`,
                 "--sc": 1 - Math.abs(it.pos) * 0.14,
                 opacity: isOpen ? Math.max(0, 1 - Math.abs(it.pos) * NEIGHBOR_FADE) : (isCurrent ? 1 : 0),
                 zIndex: isCurrent ? 2 : 1,

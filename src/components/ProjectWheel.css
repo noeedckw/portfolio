@@ -22,7 +22,6 @@
     border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease,
     width 0.25s ease, padding 0.25s ease,
     backdrop-filter 0.2s ease, -webkit-backdrop-filter 0.2s ease;
-  perspective: 340px;
 }
 
 .pwheel:hover {
@@ -81,12 +80,34 @@
    * isolée du reste de .pwheel (notamment de son backdrop-filter).
    * Sans ça, Safari a tendance à recomposer tout le parent flouté à
    * chaque frame d'animation des rows en dessous, au lieu de juste
-   * déplacer une couche déjà calculée — d'où le lag et les artefacts
-   * sur iOS en particulier.
+   * déplacer une couche déjà calculée — d'où le lag sur iOS en
+   * particulier.
    */
   will-change: transform;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
+
+  /*
+   * Simule le texte qui "disparaît derrière le cadre" en dégradé
+   * pur 2D (masque de fondu), plutôt qu'avec de l'opacité calculée
+   * en JS par frame + un effet 3D (rotateX). C'est ce dernier qui
+   * causait le rendu dédoublé sur iOS — un masque CSS ne coûte quasi
+   * rien à Safari et ne touche jamais à un contexte de transform 3D.
+   */
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 20%,
+    black 80%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 20%,
+    black 80%,
+    transparent 100%
+  );
 }
 
 .pwheel__row {
@@ -122,21 +143,14 @@
 
   /* transform piloté via variables CSS posées en inline par le JS,
      ce qui permet au :hover ci-dessous de venir s'ajouter par-dessus
-     sans écraser la position/rotation calculée par la roue */
-  transform: translateY(var(--ty, 0px)) rotateX(var(--rx, 0deg)) scale(var(--sc, 1));
+     sans écraser la position/scale calculés par la roue. Plus de
+     rotateX ici : c'était ce transform 3D (combiné au perspective du
+     parent) qui causait le rendu de texte dédoublé sur iOS Safari.
+     translateY + scale suffisent à donner l'effet de profondeur, et
+     restent en 2D pur. */
+  transform: translateY(var(--ty, 0px)) scale(var(--sc, 1));
   transition: color 0.2s ease, transform 0.15s ease;
 
-  /*
-   * backface-visibility: hidden est le fix classique pour le
-   * "double-vision text" de Safari sous transform 3D (rotateX ici) :
-   * sans lui, iOS peut laisser transparaître/re-peindre la face
-   * arrière de l'élément pendant la rotation, ce qui se voit comme du
-   * texte fantôme superposé. will-change indique au navigateur de
-   * préparer une couche de composition dédiée en amont plutôt que
-   * d'improviser au premier frame d'animation (source de saccades).
-   */
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
   will-change: transform, opacity;
 }
 
@@ -151,8 +165,7 @@
 @media (hover: hover) and (pointer: fine) {
   .pwheel__row:not(.pwheel__row--current):hover {
     color: #c7cbe0;
-    transform: translateY(var(--ty, 0px)) rotateX(var(--rx, 0deg))
-      scale(calc(var(--sc, 1) * 1.1));
+    transform: translateY(var(--ty, 0px)) scale(calc(var(--sc, 1) * 1.1));
   }
 }
 
