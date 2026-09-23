@@ -279,9 +279,22 @@
   display: none;
 }
 
-/* -------- Mobile : bottom sheet à deux pages swipables -------- */
+/* -------- Mobile : bottom sheet à deux pages swipables, en carte flottante -------- */
 
 @media (max-width: 768px) {
+
+  /*
+   * Ces deux variables pilotent à la fois la taille du sheet et la
+   * marge qui le détache des bords de l'écran (voir .project-panel-scroll
+   * et .project-panel-dots plus bas, qui recalculent leur position à
+   * partir de ces mêmes valeurs — pour ne pas avoir à resynchroniser
+   * plusieurs nombres en dur si on retouche la hauteur plus tard).
+   */
+  :root {
+    --sheet-height: 50vh;
+    --sheet-side-margin: 12px;
+    --sheet-bottom-margin: 16px;
+  }
 
   .ui-hint {
     bottom: auto;
@@ -292,7 +305,13 @@
     display: none !important;
   }
 
-  /* Dots de pagination, au-dessus du bottom sheet */
+  /*
+   * Dots de pagination, au-dessus du sheet flottant. Le sheet n'est
+   * plus collé au bord bas (voir .project-panel-scroll : bottom =
+   * --sheet-bottom-margin au lieu de 0), donc son bord haut n'est plus
+   * à `55vh` du bas de l'écran mais à `--sheet-height + --sheet-bottom-margin`.
+   * On ajoute encore 12px d'espacement entre les dots et le sheet.
+   */
   .project-panel-dots {
     display: flex;
     align-items: center;
@@ -300,7 +319,7 @@
     gap: 6px;
     position: fixed;
     left: 50%;
-    bottom: calc(55vh + 12px);
+    bottom: calc(var(--sheet-height) + var(--sheet-bottom-margin) + 12px);
     transform: translateX(-50%);
     z-index: 11;
     opacity: 0;
@@ -322,18 +341,24 @@
     transform: scale(1.35);
   }
 
-  /* La piste horizontale : collée au bord bas de l'écran, point final. */
+  /*
+   * La piste horizontale : détachée des bords (marges gauche/droite/bas)
+   * au lieu d'être collée à l'écran, hauteur ramenée à 50vh (--sheet-height).
+   * C'est cette marge qui laisse enfin apparaître les coins arrondis des
+   * panels comme une vraie carte flottante, au lieu d'être "mangés" par
+   * le bord de l'écran.
+   */
   .project-panel-scroll {
     display: flex !important;
     flex-direction: row !important;
     position: fixed !important;
     top: auto !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    width: 100% !important;
-    height: 55vh !important;
-    max-height: 55vh !important;
+    left: var(--sheet-side-margin) !important;
+    right: var(--sheet-side-margin) !important;
+    bottom: var(--sheet-bottom-margin) !important;
+    width: calc(100% - (var(--sheet-side-margin) * 2)) !important;
+    height: var(--sheet-height) !important;
+    max-height: var(--sheet-height) !important;
     margin: 0 !important;
     box-sizing: border-box !important;
 
@@ -342,7 +367,8 @@
     scroll-snap-type: x mandatory !important;
     -webkit-overflow-scrolling: touch !important;
 
-    border-radius: 20px 20px 0 0 !important;
+    /* plus de coins carrés en bas : le sheet flotte, tous les coins comptent */
+    border-radius: 20px !important;
 
     opacity: 0;
     pointer-events: none;
@@ -380,9 +406,15 @@
     transform: none !important;
     background: rgba(10, 10, 12, 0.9);
     backdrop-filter: blur(14px);
-    border: none;
 
-    padding: 24px 20px 28px !important;
+    /* Carte flottante : bordure + coins arrondis sur les 4 côtés +
+       ombre légère pour bien la détacher du fond, maintenant que rien
+       ne la colle aux bords de l'écran. */
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+
+    padding: 22px 18px 24px !important;
     opacity: 1 !important;
     pointer-events: auto !important;
   }
@@ -393,5 +425,14 @@
   .project-panel--right {
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
+  }
+
+  /* Texte explicatif un peu plus petit sur mobile, où l'espace est réduit */
+  .project-panel__desc {
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+  .project-panel__highlights li {
+    font-size: 0.8rem;
   }
 }
