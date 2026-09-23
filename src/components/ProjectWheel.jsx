@@ -28,6 +28,19 @@ import "./ProjectWheel.css";
  * pointerup (via justDraggedRef), pour ne pas parasiter la sélection
  * avec un clic non voulu sur le bouton relâché.
  *
+ * IMPORTANT — capture de pointeur différée : on ne pose
+ * setPointerCapture qu'une fois le drag confirmé (seuil dépassé), et
+ * jamais dès le pointerdown. La capturer immédiatement faisait que le
+ * navigateur redirigeait aussi les événements souris de compatibilité
+ * — dont le `click` qui suit un simple clic — vers l'élément capturé
+ * (la racine), même quand aucun drag n'avait réellement eu lieu. Un
+ * clic sur un row voisin arrivait donc avec e.target = la racine et
+ * non le <button> du row, et tombait dans handleRootClick au lieu de
+ * déclencher settle() sur ce row : impossible de cliquer sur
+ * prev/next sur desktop. En ne capturant qu'après confirmation du
+ * drag, un simple clic ne capture jamais rien et suit son cours
+ * normal jusqu'au <button>.
+ *
  * `settle()` reste l'UNIQUE point qui referme la roue (clickedOpen →
  * false) et sélectionne, que la navigation vienne d'un clic, d'une
  * flèche, de la molette, du clavier OU de la fin d'un drag — donc
@@ -112,7 +125,7 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
 
   const rootRef = useRef(null);
   const rafRef = useRef(null);
-  const dragRef = useRef(null); // { startY, startRotation, moved }
+  const dragRef = useRef(null); // { pointerId, startY, startRotation, moved }
   // Throttle des pointermove : sur iOS/tactile, ces events peuvent
   // arriver bien plus souvent que l'écran ne peut peindre (jusqu'à
   // 120Hz sur ProMotion). Sans throttle, on empile des setState plus
@@ -175,22 +188,27 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
     onSelect(items[((nearest % n) + n) % n].id);
   }, [stopMomentum, items, n, onSelect]);
 
-  // --- Drag-to-spin via Pointer Events + capture, avec détection
-  // clic-vs-drag par seuil de mouvement (voir commentaire en tête de
-  // fichier). On exclut seulement la zone des flèches (.pwheel__rail),
-  // qui garde un clic simple prev/next. Pas d'inertie : la roue suit
-  // le doigt 1:1 pendant le drag, et se cale directement sur l'item
-  // le plus proche au relâchement. ---
+  // --- Drag-to-spin via Pointer Events, avec détection clic-vs-drag
+  // par seuil de mouvement (voir commentaire en tête de fichier). On
+  // exclut seulement la zone des flèches (.pwheel__rail), qui garde
+  // un clic simple prev/next. Pas d'inertie : la roue suit le doigt
+  // 1:1 pendant le drag, et se cale directement sur l'item le plus
+  // proche au relâchement.
+  //
+  // setPointerCapture n'est PAS posée ici : voir le commentaire en
+  // tête de fichier sur pourquoi la capture doit être différée
+  // jusqu'à la confirmation du drag (fix du clic bloqué sur desktop).
+  // ---
   const handlePointerDown = useCallback((e) => {
     if (e.target.closest(".pwheel__rail")) return;
 
     dragRef.current = {
+      pointerId: e.pointerId,
       startY: e.clientY,
       startRotation: rotationRef.current,
       moved: false,
     };
     stopMomentum();
-    e.currentTarget.setPointerCapture(e.pointerId);
   }, [stopMomentum]);
 
   const handlePointerMove = useCallback((e) => {
@@ -213,6 +231,14 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
         dragRef.current.moved = true;
         isInteracting.current = true;
         setSpinning(true); // ouvre la roue dès que le drag est confirmé
+
+        // Drag confirmé : on ne capture le pointeur QUE maintenant,
+        // jamais au pointerdown (voir commentaire en tête de fichier).
+        try {
+          rootRef.current?.setPointerCapture(dragRef.current.pointerId);
+        } catch {
+          // no-op — peut échouer si le pointeur n'est déjà plus actif
+        }
       }
 
       setRotation(dragRef.current.startRotation - dyTotal / ITEM_HEIGHT);
@@ -236,7 +262,8 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch {
-      // no-op si déjà relâché
+      // no-op si déjà relâché, ou si la capture n'a jamais été posée
+      // (cas du simple clic, désormais le cas le plus fréquent)
     }
 
     if (!wasDrag) return; // simple tap/clic : on laisse le onClick natif du bouton gérer ça
