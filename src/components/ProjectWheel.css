@@ -43,13 +43,14 @@
 }
 
 /*
- * Pendant le spin, on réduit fortement le backdrop-filter (voire on le
- * coupe). C'est LE point de coût le plus cher sur iOS Safari : un flou
- * de fond recalculé à chaque frame pendant qu'une animation tourne
- * juste au-dessus provoque à la fois le lag et des artefacts de
- * rendu (l'ancienne frame pas totalement effacée avant la nouvelle =
- * effet de texte "dédoublé"/ghosting). On garde un fond opaque uni à
- * la place pour ne pas perdre l'effet visuel de "panneau" pendant ce
+ * Pendant le spin (drag en cours OU animation de snap de settle()),
+ * on réduit fortement le backdrop-filter (voire on le coupe). C'est
+ * LE point de coût le plus cher sur iOS Safari : un flou de fond
+ * recalculé à chaque frame pendant qu'une animation tourne juste
+ * au-dessus provoque à la fois le lag et des artefacts de rendu
+ * (l'ancienne frame pas totalement effacée avant la nouvelle = effet
+ * de texte "dédoublé"/ghosting). On garde un fond opaque uni à la
+ * place pour ne pas perdre l'effet visuel de "panneau" pendant ce
  * court instant — la transition CSS lisse le retour au blur complet
  * une fois le spin terminé.
  */

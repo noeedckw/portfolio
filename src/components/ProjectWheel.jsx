@@ -14,16 +14,18 @@ import "./ProjectWheel.css";
  * note juste la position de départ, sans rien décider. Tant que le
  * déplacement cumulé reste sous DRAG_THRESHOLD, on ne touche à rien —
  * ça laisse le <button> sous le doigt recevoir un clic natif normal.
- * Dès que ça dépasse le seuil, c'est un vrai drag : on ouvre la roue,
- * on la fait tourner en live, on calcule la vélocité. Au relâchement,
- * si un drag a eu lieu, on lance l'inertie puis on "avale" le clic
- * fantôme qui suivrait sinon le pointerup (via justDraggedRef), pour
- * ne pas parasiter la sélection avec un clic non voulu sur le bouton
- * relâché.
+ * Dès que ça dépasse le seuil, c'est un vrai drag : on ouvre la roue
+ * et on la fait tourner en live, 1:1 avec le mouvement du pointeur
+ * (pas de calcul de vélocité). Au relâchement, si un drag a eu lieu,
+ * on cale directement sur l'item le plus proche via settle() — pas
+ * d'inertie/fling qui continuerait à faire tourner la roue toute
+ * seule — puis on "avale" le clic fantôme qui suivrait sinon le
+ * pointerup (via justDraggedRef), pour ne pas parasiter la sélection
+ * avec un clic non voulu sur le bouton relâché.
  *
  * `settle()` reste l'UNIQUE point qui referme la roue (clickedOpen →
  * false) et sélectionne, que la navigation vienne d'un clic, d'une
- * flèche, de la molette, du clavier OU de la fin d'un drag/fling — donc
+ * flèche, de la molette, du clavier OU de la fin d'un drag — donc
  * aucun chemin ne peut laisser la roue "coincée" ouverte.
  *
  * Le clic extérieur est écouté en permanence (pas seulement quand isOpen)
@@ -33,7 +35,8 @@ import "./ProjectWheel.css";
  * Sur tactile (isTouch), les flèches prev/next sont carrément retirées
  * du DOM (pas juste cachées) : trop petites pour être tapées de façon
  * fiable. Un tap sur la roue (fermée) l'ouvre ; un tap sur un row
- * voisin sélectionne et referme ; un swipe vertical fait spinner.
+ * voisin sélectionne et referme ; un swipe vertical fait tourner la
+ * roue (sans inertie, elle suit le doigt 1:1 puis se cale au lâcher).
  *
  * Props:
  * - projects: [{ id, title }]
@@ -45,8 +48,6 @@ import "./ProjectWheel.css";
 const ITEM_HEIGHT = 34; // DOIT être identique à --pwheel-row-h dans le CSS
 const VISIBLE_RANGE = 1; // toujours prev / current / next
 const DRAG_THRESHOLD = 6; // px — en dessous, on considère que c'est un tap/clic
-const FRICTION = 0.94;
-const MIN_VELOCITY = 0.01;
 // Atténuation de l'opacité des rows voisins selon leur distance au
 // centre (it.pos, qui peut monter jusqu'à ~1.5 en cours de
 // transition). Plus cette valeur est basse, plus le texte reste
@@ -106,8 +107,7 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
 
   const rootRef = useRef(null);
   const rafRef = useRef(null);
-  const dragRef = useRef(null); // { startY, startRotation, lastY, lastT, moved }
-  const velocityRef = useRef(0);
+  const dragRef = useRef(null); // { startY, startRotation, moved }
   // Vrai brièvement après la fin d'un drag réel : sert à avaler le
   // clic fantôme que le navigateur déclenche après un pointerup, pour
   // qu'il ne vienne pas parasiter la sélection gérée par settle().
@@ -121,9 +121,9 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
   }, []);
 
   // Unique point d'animation + de fermeture. Toute navigation (clic,
-  // flèche, molette, clavier) passe par ici. C'est aussi le SEUL
-  // endroit qui referme la roue (clickedOpen → false) une fois la
-  // cible atteinte — plus de risque de roue coincée ouverte.
+  // flèche, molette, clavier, fin de drag) passe par ici. C'est aussi
+  // le SEUL endroit qui referme la roue (clickedOpen → false) une fois
+  // la cible atteinte — plus de risque de roue coincée ouverte.
   const settle = useCallback(
     (finalRotation) => {
       const target = Math.round(finalRotation);
@@ -161,34 +161,20 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
     onSelect(items[((nearest % n) + n) % n].id);
   }, [stopMomentum, items, n, onSelect]);
 
-  const runMomentum = useCallback(() => {
-    const step = () => {
-      velocityRef.current *= FRICTION;
-      if (Math.abs(velocityRef.current) < MIN_VELOCITY) {
-        settle(rotationRef.current);
-        return;
-      }
-      setRotation((r) => r + velocityRef.current);
-      rafRef.current = requestAnimationFrame(step);
-    };
-    rafRef.current = requestAnimationFrame(step);
-  }, [settle]);
-
   // --- Drag-to-spin via Pointer Events + capture, avec détection
   // clic-vs-drag par seuil de mouvement (voir commentaire en tête de
   // fichier). On exclut seulement la zone des flèches (.pwheel__rail),
-  // qui garde un clic simple prev/next. ---
+  // qui garde un clic simple prev/next. Pas d'inertie : la roue suit
+  // le doigt 1:1 pendant le drag, et se cale directement sur l'item
+  // le plus proche au relâchement. ---
   const handlePointerDown = useCallback((e) => {
     if (e.target.closest(".pwheel__rail")) return;
 
     dragRef.current = {
       startY: e.clientY,
       startRotation: rotationRef.current,
-      lastY: e.clientY,
-      lastT: performance.now(),
       moved: false,
     };
-    velocityRef.current = 0;
     stopMomentum();
     e.currentTarget.setPointerCapture(e.pointerId);
   }, [stopMomentum]);
@@ -205,15 +191,7 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
       setSpinning(true); // ouvre la roue dès que le drag est confirmé
     }
 
-    const now = performance.now();
-    const { startRotation, lastY, lastT } = dragRef.current;
-
-    setRotation(startRotation - dyTotal / ITEM_HEIGHT);
-
-    const dt = Math.max(now - lastT, 1);
-    velocityRef.current = -((y - lastY) / ITEM_HEIGHT) / (dt / 16);
-    dragRef.current.lastY = y;
-    dragRef.current.lastT = now;
+    setRotation(dragRef.current.startRotation - dyTotal / ITEM_HEIGHT);
   }, []);
 
   const handlePointerUp = useCallback((e) => {
@@ -234,12 +212,9 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
       justDraggedRef.current = false;
     });
 
-    if (Math.abs(velocityRef.current) > MIN_VELOCITY) {
-      runMomentum();
-    } else {
-      settle(rotationRef.current);
-    }
-  }, [runMomentum, settle]);
+    // pas d'inertie : on cale directement sur l'item le plus proche
+    settle(rotationRef.current);
+  }, [settle]);
 
   // --- Molette : un cran = un item, pas de vélocité/inertie. On
   // ignore les événements wheel supplémentaires tant qu'une animation
