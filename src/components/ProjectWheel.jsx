@@ -15,6 +15,13 @@ import "./ProjectWheel.css";
  * et lit l'état via une ref, pour fermer le menu de façon fiable dans tous
  * les cas, y compris juste après un spin qui vient de se stabiliser.
  *
+ * Sur tactile (isTouch), les flèches prev/next sont carrément retirées
+ * du DOM (pas juste cachées) : trop petites pour être tapées de façon
+ * fiable, et le drag/swipe sur la roue fait déjà le même travail. Le
+ * composant se resserre en conséquence (voir CSS, .pwheel--touch) et
+ * le padding gauche/droite est égalisé pour garder l'ensemble
+ * index+texte visuellement centré dans le cadre.
+ *
  * Props:
  * - projects: [{ id, title }]
  * - activeId: string | null   (null = vue "Map")
@@ -33,6 +40,22 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
     [projects, mapLabel]
   );
   const n = items.length;
+
+  // Détection tactile en JS plutôt qu'en pur CSS : plus fiable que
+  // `(hover: none) and (pointer: coarse)` seul, qui se comporte de
+  // façon incohérente selon les navigateurs/webviews mobiles.
+  const [isTouch, setIsTouch] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(hover: none), (pointer: coarse)");
+    const update = () => {
+      setIsTouch(
+        mq.matches || "ontouchstart" in window || navigator.maxTouchPoints > 0
+      );
+    };
+    update();
+    mq.addEventListener?.("change", update);
+    return () => mq.removeEventListener?.("change", update);
+  }, []);
 
   const activeIndex = useMemo(() => {
     const idx = items.findIndex((it) => it.id === activeId);
@@ -182,7 +205,7 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
     [runMomentum, stopMomentum]
   );
 
-  // --- Flèches ---
+  // --- Flèches (desktop uniquement, voir isTouch) ---
   const goPrev = useCallback((e) => {
     e.stopPropagation();
     isInteracting.current = true;
@@ -245,7 +268,7 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
   return (
     <div
       ref={rootRef}
-      className={`pwheel ${isOpen ? "pwheel--open" : ""}`}
+      className={`pwheel ${isOpen ? "pwheel--open" : ""} ${isTouch ? "pwheel--touch" : ""}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onPointerDown={handlePointerDown}
@@ -270,7 +293,9 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
               type="button"
               className={`pwheel__row ${isCurrent ? "pwheel__row--current" : ""}`}
               style={{
-                transform: `translateY(${it.pos * ITEM_HEIGHT}px) rotateX(${it.pos * -28}deg) scale(${1 - Math.abs(it.pos) * 0.14})`,
+                "--ty": `${it.pos * ITEM_HEIGHT}px`,
+                "--rx": `${it.pos * -28}deg`,
+                "--sc": 1 - Math.abs(it.pos) * 0.14,
                 opacity: isOpen ? Math.max(0, 1 - Math.abs(it.pos) * 0.6) : (isCurrent ? 1 : 0),
                 zIndex: isCurrent ? 2 : 1,
                 pointerEvents: isCurrent || isOpen ? "auto" : "none",
@@ -292,26 +317,30 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
         })}
       </div>
 
-      <div className="pwheel__rail">
-        <button
-          type="button"
-          className="pwheel__chevron-btn"
-          aria-label="Projet précédent"
-          onClick={goPrev}
-          tabIndex={isOpen ? 0 : -1}
-        >
-          <span className="pwheel__chevron pwheel__chevron--up" />
-        </button>
-        <button
-          type="button"
-          className="pwheel__chevron-btn"
-          aria-label="Projet suivant"
-          onClick={goNext}
-          tabIndex={isOpen ? 0 : -1}
-        >
-          <span className="pwheel__chevron pwheel__chevron--down" />
-        </button>
-      </div>
+      {/* Flèches retirées du DOM sur tactile : trop petites pour être
+          tapées de façon fiable, et redondantes avec le drag/swipe. */}
+      {!isTouch && (
+        <div className="pwheel__rail">
+          <button
+            type="button"
+            className="pwheel__chevron-btn"
+            aria-label="Projet précédent"
+            onClick={goPrev}
+            tabIndex={isOpen ? 0 : -1}
+          >
+            <span className="pwheel__chevron pwheel__chevron--up" />
+          </button>
+          <button
+            type="button"
+            className="pwheel__chevron-btn"
+            aria-label="Projet suivant"
+            onClick={goNext}
+            tabIndex={isOpen ? 0 : -1}
+          >
+            <span className="pwheel__chevron pwheel__chevron--down" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

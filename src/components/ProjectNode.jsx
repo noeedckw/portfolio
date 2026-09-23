@@ -165,6 +165,15 @@ function useSafeTexture(url, containerAspect, fit = "contain") {
  * hover/active), appliquée directement sur les matériaux/Text via
  * des refs pour rester fluide sans re-render React à chaque frame.
  *
+ * Fondu de la carte elle-même (image + bordure) : quand `isDimmed`
+ * passe à true (un AUTRE projet est actif), l'opacité de l'image et
+ * de la bordure est interpolée en continu vers 0 via `mediaOpacityRef`
+ * (même logique que `textOpacityRef` pour le bloc texte), plutôt
+ * qu'un `visible=false` instantané. Le `visible` du groupe externe
+ * n'est basculé à `false` qu'une fois l'opacité quasi nulle, pour
+ * désactiver le raycast (hover/clic) une fois la carte réellement
+ * invisible, sans casser le fondu pendant la transition.
+ *
  * Zoom au clic (logo.zoomed) : quand `isActive` devient vrai, tout le
  * CONTENU visuel de la carte (image + panneau + texte) est scalé et
  * décalé selon `logo.zoomed.{scale,offsetX,offsetY}` — ce bloc est
@@ -288,6 +297,11 @@ export default function ProjectNode({ project, isActive, isDimmed, onSelect, lan
   const titleTextRef = useRef();
   const dateTextRef = useRef();
 
+  // Refs vers les matériaux de la carte elle-même (image + bordure),
+  // pour le fondu en continu quand isDimmed change.
+  const borderMatRef = useRef();
+  const mainMatRef = useRef();
+
   // Le bloc texte doit se cacher si un AUTRE projet est actif
   // (isDimmed) OU si CE projet est lui-même actif (isActive).
   const textHidden = isDimmed || isActive;
@@ -298,6 +312,13 @@ export default function ProjectNode({ project, isActive, isDimmed, onSelect, lan
   const LEVITATION_AMPLITUDE = 0.06;
   const baseY = project.position[1];
   const textOpacityRef = useRef(textHidden ? 0 : 1);
+
+  // Opacité courante de la carte (image + bordure), interpolée en
+  // continu vers 0 quand isDimmed (un autre projet est actif) et
+  // vers 1 sinon. Séparée de textOpacityRef : la carte doit rester
+  // visible quand CE projet est isActive (juste zoomé), seul le
+  // bloc texte se cache dans ce cas.
+  const mediaOpacityRef = useRef(isDimmed ? 0 : 1);
 
   useFrame((_, delta) => {
     if (!groupRef.current) return;
@@ -330,6 +351,27 @@ export default function ProjectNode({ project, isActive, isDimmed, onSelect, lan
       );
     }
 
+    // fondu de la carte (image + bordure) — se cache uniquement
+    // quand un AUTRE projet est actif (isDimmed), pas quand CE
+    // projet est lui-même zoomé (isActive).
+    const targetMediaOpacity = isDimmed ? 0 : 1;
+    mediaOpacityRef.current = THREE.MathUtils.lerp(
+      mediaOpacityRef.current,
+      targetMediaOpacity,
+      Math.min(1, delta * 6)
+    );
+    const mo = mediaOpacityRef.current;
+
+    if (borderMatRef.current) {
+      borderMatRef.current.opacity = mo * (logo.border.opacity ?? 1);
+    }
+    if (mainMatRef.current) {
+      mainMatRef.current.opacity = mo;
+    }
+    // désactive le raycast (hover/clic) une fois la carte vraiment
+    // invisible, sans couper le fondu pendant la transition
+    groupRef.current.visible = mo > 0.01;
+
     // fade in/out du bloc texte (titre + date + panneau)
     const targetTextOpacity = textHidden ? 0 : 1;
     textOpacityRef.current = THREE.MathUtils.lerp(
@@ -359,8 +401,6 @@ export default function ProjectNode({ project, isActive, isDimmed, onSelect, lan
     }
   });
 
-  const targetOpacity = isDimmed ? 0.15 : 1;
-
   return (
     <group
       ref={groupRef}
@@ -384,19 +424,21 @@ export default function ProjectNode({ project, isActive, isDimmed, onSelect, lan
           {borderGeometry && (
             <mesh geometry={borderGeometry} position={[0, 0, 0]}>
               <meshBasicMaterial
+                ref={borderMatRef}
                 color={logo.border.color ?? project.theme?.accent ?? "#ffffff"}
                 transparent
-                opacity={targetOpacity * (logo.border.opacity ?? 1)}
+                opacity={mediaOpacityRef.current * (logo.border.opacity ?? 1)}
               />
             </mesh>
           )}
 
           <mesh key={texture ? "with-texture" : "placeholder"} geometry={mainGeometry} position={[0, 0, 0.01]}>
             <meshBasicMaterial
+              ref={mainMatRef}
               map={texture ?? undefined}
               color={texture ? "#ffffff" : project.theme?.background ?? "#111214"}
               transparent
-              opacity={targetOpacity}
+              opacity={mediaOpacityRef.current}
               toneMapped={false}
             />
           </mesh>

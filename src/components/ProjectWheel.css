@@ -19,7 +19,8 @@
   pointer-events: auto;
   touch-action: none;
   transition: height 0.32s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+    border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease,
+    width 0.25s ease, padding 0.25s ease;
   perspective: 340px;
 }
 
@@ -88,10 +89,28 @@
   text-overflow: ellipsis;
 
   transform-origin: center;
+
+  /* transform piloté via variables CSS posées en inline par le JS,
+     ce qui permet au :hover ci-dessous de venir s'ajouter par-dessus
+     sans écraser la position/rotation calculée par la roue */
+  transform: translateY(var(--ty, 0px)) rotateX(var(--rx, 0deg)) scale(var(--sc, 1));
+  transition: color 0.2s ease, transform 0.15s ease;
 }
 
 .pwheel__row--current {
   color: #ffffff;
+}
+
+/* Hover sur une ligne voisine (prev/next) : léger zoom + éclaircissement,
+   pour signaler que c'est cliquable avant même de cliquer. Exclu de la
+   ligne courante (déjà mise en avant autrement) et sans effet sur
+   tactile, où il n'y a pas de vrai hover. */
+@media (hover: hover) and (pointer: fine) {
+  .pwheel__row:not(.pwheel__row--current):hover {
+    color: #c7cbe0;
+    transform: translateY(var(--ty, 0px)) rotateX(var(--rx, 0deg))
+      scale(calc(var(--sc, 1) * 1.1));
+  }
 }
 
 .pwheel__rail {
@@ -154,9 +173,19 @@
   transform: rotate(45deg);
 }
 
-/* Petits écrans : on resserre encore un peu */
+/* --- Tactile : le JSX ne rend plus du tout .pwheel__rail (voir
+   ProjectWheel.jsx, isTouch), donc plus besoin de lui réserver de
+   place. On resserre le composant et on égalise le padding
+   gauche/droite pour que index + texte restent bien équilibrés dans
+   le cadre, sans viser un centrage pixel-perfect du texte lui-même. --- */
+.pwheel--touch {
+  width: clamp(150px, 42vw, 190px);
+  padding: 8px clamp(10px, 3vw, 14px); /* même valeur des deux côtés, plus de côté "flèches" */
+}
+
+/* Petits écrans : on resserre encore un peu (desktop/pointeur fin) */
 @media (max-width: 480px) {
-  .pwheel {
+  .pwheel:not(.pwheel--touch) {
     width: clamp(170px, 60vw, 200px); /* ← plancher remonté à 170px (était 150px) */
     gap: 6px;
     padding: 6px 10px 6px 8px;
@@ -168,6 +197,24 @@
   }
 
   .pwheel__row {
+    font-size: 11px;
+  }
+}
+
+/* Petits écrans en tactile : version resserrée avec padding égal */
+@media (max-width: 480px) {
+  .pwheel--touch {
+    width: clamp(140px, 50vw, 175px);
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 18px;
+  }
+
+  .pwheel--touch .pwheel__index {
+    font-size: 9px;
+  }
+
+  .pwheel--touch .pwheel__row {
     font-size: 11px;
   }
 }
