@@ -16,9 +16,14 @@ import "./ProjectWheel.css";
  * ça laisse le <button> sous le doigt recevoir un clic natif normal.
  * Dès que ça dépasse le seuil, c'est un vrai drag : on ouvre la roue
  * et on la fait tourner en live, 1:1 avec le mouvement du pointeur
- * (pas de calcul de vélocité). Au relâchement, si un drag a eu lieu,
- * on cale directement sur l'item le plus proche via settle() — pas
- * d'inertie/fling qui continuerait à faire tourner la roue toute
+ * (pas de calcul de vélocité). Le commit de la position pendant le
+ * drag est throttlé à une fois par frame via requestAnimationFrame
+ * (voir dragFrameRef/pendingDragYRef) : sur iOS/tactile, les events
+ * pointermove peuvent arriver plus vite que l'écran ne peint, et
+ * enchaîner les setState à ce rythme-là produit à la fois du lag et
+ * un effet de "dédoublement" visuel. Au relâchement, si un drag a eu
+ * lieu, on cale directement sur l'item le plus proche via settle() —
+ * pas d'inertie/fling qui continuerait à faire tourner la roue toute
  * seule — puis on "avale" le clic fantôme qui suivrait sinon le
  * pointerup (via justDraggedRef), pour ne pas parasiter la sélection
  * avec un clic non voulu sur le bouton relâché.
@@ -108,6 +113,15 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
   const rootRef = useRef(null);
   const rafRef = useRef(null);
   const dragRef = useRef(null); // { startY, startRotation, moved }
+  // Throttle des pointermove : sur iOS/tactile, ces events peuvent
+  // arriver bien plus souvent que l'écran ne peut peindre (jusqu'à
+  // 120Hz sur ProMotion). Sans throttle, on empile des setState plus
+  // vite que React ne peut rendre, ce qui produit du lag ET un effet
+  // de "dédoublement" (les rows n'arrivent jamais à rattraper leur
+  // position cible). On ne garde que la DERNIÈRE position connue et on
+  // ne commit qu'une fois par frame via rAF.
+  const dragFrameRef = useRef(null);
+  const pendingDragYRef = useRef(null);
   // Vrai brièvement après la fin d'un drag réel : sert à avaler le
   // clic fantôme que le navigateur déclenche après un pointerup, pour
   // qu'il ne vienne pas parasiter la sélection gérée par settle().
@@ -181,21 +195,42 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
 
   const handlePointerMove = useCallback((e) => {
     if (!dragRef.current) return;
-    const y = e.clientY;
-    const dyTotal = y - dragRef.current.startY;
+    // On stocke juste la dernière position connue. Le vrai travail
+    // (lecture + setState) est différé dans un rAF, planifié au plus
+    // une fois par frame — voir commentaire sur dragFrameRef.
+    pendingDragYRef.current = e.clientY;
+    if (dragFrameRef.current) return; // un commit est déjà planifié pour cette frame
 
-    if (!dragRef.current.moved) {
-      if (Math.abs(dyTotal) < DRAG_THRESHOLD) return; // encore sous le seuil, peut-être un simple tap
-      dragRef.current.moved = true;
-      isInteracting.current = true;
-      setSpinning(true); // ouvre la roue dès que le drag est confirmé
-    }
+    dragFrameRef.current = requestAnimationFrame(() => {
+      dragFrameRef.current = null;
+      if (!dragRef.current) return; // drag terminé entre-temps
 
-    setRotation(dragRef.current.startRotation - dyTotal / ITEM_HEIGHT);
+      const y = pendingDragYRef.current;
+      const dyTotal = y - dragRef.current.startY;
+
+      if (!dragRef.current.moved) {
+        if (Math.abs(dyTotal) < DRAG_THRESHOLD) return; // encore sous le seuil, peut-être un simple tap
+        dragRef.current.moved = true;
+        isInteracting.current = true;
+        setSpinning(true); // ouvre la roue dès que le drag est confirmé
+      }
+
+      setRotation(dragRef.current.startRotation - dyTotal / ITEM_HEIGHT);
+    });
   }, []);
 
   const handlePointerUp = useCallback((e) => {
     if (!dragRef.current) return;
+
+    // Annule un éventuel commit de position encore planifié pour la
+    // prochaine frame : sinon il pourrait s'exécuter après coup, une
+    // fois dragRef déjà nettoyé plus bas, et tenter de lire une
+    // position obsolète.
+    if (dragFrameRef.current) {
+      cancelAnimationFrame(dragFrameRef.current);
+      dragFrameRef.current = null;
+    }
+
     const wasDrag = dragRef.current.moved;
     dragRef.current = null;
     try {
@@ -278,6 +313,9 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
   }, [forceClose]);
 
   useEffect(() => stopMomentum, [stopMomentum]);
+  useEffect(() => () => {
+    if (dragFrameRef.current) cancelAnimationFrame(dragFrameRef.current);
+  }, []);
 
   const visibleItems = [];
   const base = Math.round(rotation);
