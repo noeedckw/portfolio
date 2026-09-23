@@ -318,7 +318,7 @@ export default function ProjectWheel({ projects, activeId, onSelect, mapLabel = 
   return (
     <div
       ref={rootRef}
-      className={`pwheel ${isOpen ? "pwheel--open" : ""} ${isTouch ? "pwheel--touch" : ""}`}
+      className={`pwheel ${isOpen ? "pwheel--open" : ""} ${isTouch ? "pwheel--touch" : ""} ${spinning ? "pwheel--spinning" : ""}`}
       onMouseEnter={isTouch ? undefined : () => setHovered(true)}
       onMouseLeave={isTouch ? undefined : () => setHovered(false)}
       onClick={handleRootClick}
