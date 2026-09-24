@@ -822,7 +822,7 @@ export const projects = [
       { label: "Stack", value: "C++ / Python" },
     ],
 
-    image: "/assets/projects/harmonia/icon.png",
+    image: "/assets/projects/harmonia/harmonia-logo.png",
 
     year: 2025,
     role: "Développeur logiciel audio (JUCE / IA)",
@@ -844,6 +844,7 @@ export const projects = [
     },
 
     logo: {
+      shape: "none",
       width: 1.4,
       height: 1.4,
       text: {

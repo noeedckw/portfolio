@@ -1,3 +1,5 @@
+import "./ProjectLinks.css";
+
 const LINK_LABELS = {
   fr: { live: "Voir le site", github: "Code source", caseStudy: "Étude de cas", linkedin: "LinkedIn", email: "Contact" },
   en: { live: "Visit site", github: "Source code", caseStudy: "Case study", linkedin: "LinkedIn", email: "Contact" },
@@ -11,18 +13,18 @@ export default function ProjectLinks({ links, accent = "#ffffff", locale = "fr" 
   if (!entries.length) return null;
 
   return (
-    <div className="project-links">
-      {entries.map(([key, url]) => (
+    <div className="project-links" style={{ "--accent": accent }}>
+      {entries.map(([key, url], i) => (
         <a
           key={key}
-          href={url}
+          href={key === "email" && !url.startsWith("mailto:") ? `mailto:${url}` : url}
           target={key === "email" ? undefined : "_blank"}
           rel="noreferrer"
           className="project-links__item"
-          style={{ borderColor: accent }}
+          style={{ "--i": i }}
         >
-          <span className="project-links__icon" style={{ color: accent }}>{LINK_ICONS[key] ?? "↗"}</span>
-          {labels[key] ?? key}
+          <span className="project-links__icon" aria-hidden="true">{LINK_ICONS[key] ?? "↗"}</span>
+          <span className="project-links__label">{labels[key] ?? key}</span>
         </a>
       ))}
     </div>

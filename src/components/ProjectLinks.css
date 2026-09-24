@@ -1,0 +1,181 @@
+/* ==========================================================================
+   ProjectLinks — liens d'un projet (panneau droit)
+   La couleur du projet arrive via la variable CSS --accent (posée en inline
+   par le composant). Tout le reste vit ici.
+   ========================================================================== */
+
+.project-links {
+  --accent: #ffffff;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+/* -------- Ligne de lien -------- */
+
+.project-links__item {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px 10px 10px;
+
+  color: #eef0f4;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--accent) 11%, transparent) 0%,
+      rgba(255, 255, 255, 0.02) 65%
+    );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  transition:
+    transform 0.4s var(--ease-out),
+    border-color 0.35s ease,
+    background 0.35s ease,
+    box-shadow 0.4s var(--ease-out);
+
+  /* Apparition en cascade, une seule fois à l'ouverture du panneau */
+  animation: project-link-in 0.6s var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 70ms + 120ms);
+}
+
+/* Reflet qui balaie la ligne au survol */
+.project-links__item::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    color-mix(in srgb, var(--accent) 22%, white 8%) 50%,
+    transparent 70%
+  );
+  opacity: 0.5;
+  transform: translateX(-120%);
+  transition: transform 0.8s var(--ease-out);
+  pointer-events: none;
+}
+
+/* Chevron dessiné en CSS : glisse légèrement vers la droite au survol */
+.project-links__item::after {
+  content: "";
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-top: 1.5px solid currentColor;
+  border-right: 1.5px solid currentColor;
+  opacity: 0.3;
+  transform: translateX(0) rotate(45deg);
+  transition: transform 0.4s var(--ease-out), opacity 0.3s ease, color 0.3s ease;
+}
+
+/* -------- Pastille d'icône -------- */
+
+.project-links__icon {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1;
+
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+
+  transition: transform 0.4s var(--ease-out), background 0.35s ease, border-color 0.35s ease;
+}
+
+.project-links__label {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* -------- Survol / focus / clic -------- */
+
+.project-links__item:hover,
+.project-links__item:focus-visible {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--accent) 18%, transparent) 0%,
+      rgba(255, 255, 255, 0.04) 70%
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 10px 26px -12px color-mix(in srgb, var(--accent) 65%, transparent);
+}
+
+.project-links__item:hover::before,
+.project-links__item:focus-visible::before {
+  transform: translateX(120%);
+}
+
+.project-links__item:hover::after,
+.project-links__item:focus-visible::after {
+  opacity: 0.9;
+  color: var(--accent);
+  transform: translateX(4px) rotate(45deg);
+}
+
+.project-links__item:hover .project-links__icon,
+.project-links__item:focus-visible .project-links__icon {
+  transform: scale(1.07);
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.project-links__item:active {
+  transform: translateY(0) scale(0.985);
+  transition-duration: 0.12s;
+}
+
+.project-links__item:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, white 10%);
+  outline-offset: 3px;
+}
+
+/* -------- Animation d'entrée -------- */
+
+@keyframes project-link-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* -------- Accessibilité : mouvement réduit -------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .project-links__item,
+  .project-links__item::before,
+  .project-links__item::after,
+  .project-links__icon {
+    animation: none;
+    transition-duration: 0.01ms;
+  }
+}
